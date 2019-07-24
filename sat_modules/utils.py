@@ -99,7 +99,7 @@ def valid_region(r):
         raise argparse.ArgumentTypeError(msg)
 
 
-def path():
+def path(output_path):
     """
     Configure the tree of datasets path. 
     Create the folder and the downloaded_files file.
@@ -111,22 +111,21 @@ def path():
 
     file = 'downloaded_files.json'
     list_region = config.regions
-    local_path = config.local_path
 
     try:
-        with open(os.path.join(local_path, file)) as data_file:
+        with open(os.path.join(output_path, file)) as data_file:
             json.load(data_file)
     except:
-        if not (os.path.isdir(local_path)):
-            os.mkdir(local_path)
+        if not (os.path.isdir(output_path)):
+            os.mkdir(output_path)
 
         dictionary = {"Sentinel-2": {}, "Landsat 8": {}}
 
         for region in list_region:
 
-            os.mkdir(os.path.join(local_path, region))
+            os.mkdir(os.path.join(output_path, region))
             dictionary['Sentinel-2'][region] = []
             dictionary['Landsat 8'][region] = []
 
-        with open(os.path.join(local_path, 'downloaded_files.json'), 'w') as outfile:
+        with open(os.path.join(output_path, 'downloaded_files.json'), 'w') as outfile:
             json.dump(dictionary, outfile)
