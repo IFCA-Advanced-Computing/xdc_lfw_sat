@@ -42,7 +42,7 @@ import os
 
 class Landsat:
 
-    def __init__(self, inidate, enddate, region=None, producttype = "LANDSAT_8_C1"):
+    def __init__(self, inidate, enddate, region=None, producttype = "LANDSAT_8_C1", path=None):
         """
         initialize the variables used in the landsat class
 
@@ -61,7 +61,7 @@ class Landsat:
         self.producttype = producttype
 
         #work path
-        self.path = config.local_path
+        self.path = path
 
         #metadata of the data
         self.output = {}

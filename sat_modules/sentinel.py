@@ -44,7 +44,7 @@ import json
 
 class Sentinel:
 
-    def __init__(self, inidate, enddate, region=None, platform='Sentinel-2', producttype="S2MSI1C"):
+    def __init__(self, inidate, enddate, region=None, platform='Sentinel-2', producttype="S2MSI1C", path=None):
 
         #Search parameter needed for download
         self.inidate = inidate.strftime('%Y-%m-%dT%H:%M:%SZ')
@@ -55,7 +55,7 @@ class Sentinel:
         self.platform = platform
 
         #work path
-        self.path = config.local_path
+        self.path = path
 
         #metadata of the data
         self.output = {}

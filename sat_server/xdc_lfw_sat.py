@@ -28,8 +28,12 @@ parser.add_argument('--region',
 
 parser.add_argument('-sat',
 		    help="Sentinel2 or Landsat8",
-		    required=True,
-		    choices=['Sentinel2', 'Landsat8'])
+		    required=False,
+		    choices=['Sentinel2', 'Landsat8', None])
+
+parser.add_argument('-path',
+		   help='output path',
+		   required=True)
 
 args = parser.parse_args()
 
@@ -40,13 +44,21 @@ sd, ed = utils.valid_date(args.start_date, args.end_date)
 utils.valid_region(args.region)
 
 #configure the tree of datasets path
-utils.path()
+utils.path(args.path)
 
 if args.sat == "Sentinel2":
     #download sentinel files
-    s = sentinel.Sentinel(sd, ed, args.region)
+    s = sentinel.Sentinel(sd, ed, args.region, path=args.path)
     s.download()
 elif args.sat == "Landsat8":
     #download landsat files
-    l = landsat.Landsat(sd, ed, args.region)
+    l = landsat.Landsat(sd, ed, args.region, path=args.path)
     l.download()
+elif args.sat == None:
+    #download sentinel and landsat files
+    s = sentinel.Sentinel(sd, ed, args.region, path=args.path)
+    s.download()
+
+    l = landsat.Landsat(sd, ed, args.region, path=args.path)
+    l.download()
+
