@@ -1,9 +1,6 @@
 #imports apis
 import os
 
-#configure local path
-local_path = "local_path"
-
 #Sentinel credentials
 sentinel_pass = {'username': "username", 'password': "password"}
 
