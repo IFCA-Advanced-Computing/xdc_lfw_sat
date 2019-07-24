@@ -25,14 +25,10 @@ Date: May 2018
 from sat_modules import config
 
 #APIs
-import zipfile, tarfile
 import argparse
-import numpy as np
 import os, shutil
 import json
 import datetime
-import utm
-from netCDF4 import Dataset
 from six import string_types
 
 
