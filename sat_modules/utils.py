@@ -25,11 +25,14 @@ Date: May 2018
 from sat_modules import config
 
 #APIs
+import zipfile, tarfile
 import argparse
-import os, shutil
+import os
 import json
 import datetime
 from six import string_types
+from functools import reduce
+import operator
 
 
 def valid_date(sd, ed):
@@ -78,28 +81,41 @@ def valid_date(sd, ed):
         raise argparse.ArgumentTypeError(msg)
 
 
-def valid_region(r):
+def valid_region(region, coord = None):
     """
     check if the regions exits
 
     Parameters
     ----------
-    r(region) : str e.g: "CdP"
+    coordinates: list of coordinates
 
     Raises
     ------
     FormatError
             Not a valid region
     """
-
-    if r in config.regions:
-        pass
+    
+    if region in config.regions:
+        
+        coordinates = config.regions[region]['coordinates']
+        
     else:
-        msg = "Not a valid region: '{0}'.".format(r)
-        raise argparse.ArgumentTypeError(msg)
+        
+        #Hacer saltar el widget del mapa
+
+        W = round(-360.0 + float(coord.split('[')[2][:8]), 4)
+        S = float(coord.split('[')[2][-11:-4])
+        E = round(-360.0 + float(coord.split('[')[4][:8]), 4)
+        N = float(coord.split('[')[4][-11:-4])
+        
+        coordinates = {}
+        coordinates['W'], coordinates['S'] = W, S
+        coordinates['E'], coordinates['N'] = E, N
+
+    return coordinates
 
 
-def path(output_path):
+def path(output_path, region):
     """
     Configure the tree of datasets path. 
     Create the folder and the downloaded_files file.
@@ -108,24 +124,89 @@ def path(output_path):
     ----------
     path : datasets path from config file
     """
-
+    
+    region_path = os.path.join(output_path, region)
     file = 'downloaded_files.json'
-    list_region = config.regions
 
+    
     try:
-        with open(os.path.join(output_path, file)) as data_file:
+        with open(os.path.join(output_path, region, file)) as data_file:
             json.load(data_file)
     except:
-        if not (os.path.isdir(output_path)):
-            os.mkdir(output_path)
+        if not (os.path.isdir(region_path)):
+            if not (os.path.isdir(output_path)):
+                os.mkdir(output_path)
+            os.mkdir(region_path)
 
-        dictionary = {"Sentinel-2": {}, "Landsat 8": {}}
+        dictionary = {"Sentinel-2": [], "Landsat 8": []}
 
-        for region in list_region:
-
-            os.mkdir(os.path.join(output_path, region))
-            dictionary['Sentinel-2'][region] = []
-            dictionary['Landsat 8'][region] = []
-
-        with open(os.path.join(output_path, 'downloaded_files.json'), 'w') as outfile:
+        with open(os.path.join(output_path, region, 'downloaded_files.json'), 'w') as outfile:
             json.dump(dictionary, outfile)
+
+
+def unzip_tarfile(local_filename, date_path):
+
+    tar = tarfile.open(local_filename, "r:gz")
+    tar.extractall(path = date_path)
+    tar.close()
+    os.remove(local_filename)
+
+
+def unzip_zipfile(local_filename, date_path):
+
+    zip_ref = zipfile.ZipFile(local_filename, 'r')
+    zip_ref.extractall(date_path)
+    zip_ref.close()
+    os.remove(local_filename)
+
+#Sub-functions of read_config_file
+def get_by_path(root, items):
+    """
+    Access a nested object in root by item sequence.
+    ref: https://stackoverflow.com/questions/14692690/access-nested-dictionary-items-via-a-list-of-keys
+    """
+    return reduce(operator.getitem, items, root)
+
+#Sub-functions of read_config_file
+def set_by_path(root, items, value):
+    """
+    Set a value in a nested object in root by item sequence.
+    ref: https://stackoverflow.com/questions/14692690/access-nested-dictionary-items-via-a-list-of-keys
+    """
+    get_by_path(root, items[:-1])[items[-1]] = value
+
+
+#Read the metadata file of Landsat
+def landsat_config_file(tile_path):
+    """
+    Read a LandSat MTL config file to a Python dict
+    """
+
+    f = open(tile_path)
+
+    group_path = []
+    config = {}
+
+    for line in f:
+        line = line.lstrip(' ').rstrip() #remove leading whitespaces and trainling newlines
+
+        if line.startswith('GROUP'):
+            group_name = line.split(' = ')[1]
+            group_path.append(group_name)
+            set_by_path(root=config, items=group_path, value={})
+
+        elif line.startswith('END_GROUP'):
+            del group_path[-1]
+
+        elif line.startswith('END'):
+            continue
+
+        else:
+            key, value  = line.split(' = ')
+            try:
+                set_by_path(root=config, items=group_path + [key], value=json.loads(value))
+            except Exception:
+                set_by_path(root=config, items=group_path + [key], value=value)
+    f.close()
+    config = config['L1_METADATA_FILE']
+    return config

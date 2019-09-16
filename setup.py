@@ -12,7 +12,7 @@
 # limitations under the License.
 
 import setuptools
-from pip.req import parse_requirements
+from pip._internal.req import parse_requirements
 
 print('###############################\n'
        '[!!!] NOTICE: To run this app, you need to install the following packages: rabbitmq-server celery mysql-server libmysqlclient-dev\n'
