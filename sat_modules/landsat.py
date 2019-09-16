@@ -115,6 +115,6 @@ class landsat():
 
     
             self.coordinates[res]['geotransform'] = self.ds_bands[res][0].GetGeoTransform()
-            self.coordinates[res]['geoprojection'] = self.ds_bands[15][0].GetProjection()
+            self.coordinates[res]['geoprojection'] = self.ds_bands[res][0].GetProjection()
         
         self.save_files()
