@@ -114,8 +114,7 @@ def valid_region(region, coord = None):
 
     return coordinates
 
-
-def path(output_path, region):
+def configuration_path(output_path, region):
     """
     Configure the tree of datasets path. 
     Create the folder and the downloaded_files file.
@@ -127,7 +126,6 @@ def path(output_path, region):
     
     region_path = os.path.join(output_path, region)
     file = 'downloaded_files.json'
-
     
     try:
         with open(os.path.join(output_path, region, file)) as data_file:
@@ -142,7 +140,6 @@ def path(output_path, region):
 
         with open(os.path.join(output_path, region, 'downloaded_files.json'), 'w') as outfile:
             json.dump(dictionary, outfile)
-
 
 def unzip_tarfile(local_filename, date_path):
 

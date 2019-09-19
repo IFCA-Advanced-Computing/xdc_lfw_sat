@@ -49,7 +49,7 @@ sd, ed = utils.valid_date(args.start_date, args.end_date)
 coord = utils.valid_region(args.region, args.coord)
 
 #configure the tree of datasets path
-utils.path(args.path, args.region)
+utils.configuration_path(args.path, args.region)
 
 if args.sat == "Sentinel2":
     #download sentinel files

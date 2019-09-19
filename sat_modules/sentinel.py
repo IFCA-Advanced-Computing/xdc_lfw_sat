@@ -12,7 +12,7 @@ Github: garciadd
 """
 
 #APIs
-import os, re
+import os, re, shutil
 import numpy as np
 from osgeo import gdal
 
@@ -21,7 +21,7 @@ from sat_modules import gdal_utils
 
 class sentinel():
     
-    def __init__(self, tile_path):
+    def __init__(self, tile_path, output_path):
         
         self.max_res = 60
 
@@ -45,6 +45,7 @@ class sentinel():
                                'B10': 'B10 Cirrus	[1375 nm]'}}
         
         self. tile_path = tile_path
+        self.output_path = output_path
         
     def read_config_file(self):
         
@@ -69,7 +70,7 @@ class sentinel():
     def save_files(self, arr_bands):
         
         for res in self.sets.keys():
-            output_path = os.path.join(self.tile_path, 'Sentinel_Bands_{}.tif'.format(res))
+            tif_path = os.path.join(self.output_path, 'Sentinel_Bands_{}m.tif'.format(res))
             coor = self.coord[res]
             description = self.band_desc[res]
             bands = arr_bands[res]
@@ -78,7 +79,7 @@ class sentinel():
             for i, b in enumerate(self.res_to_bands[res]):
                 arr_b.append(bands[b])
                 desc.append(description[b])
-            gdal_utils.save_gdal(output_path, np.array(arr_b), desc, coor['geotransform'], coor['geoprojection'], file_format='GTiff')
+            gdal_utils.save_gdal(tif_path, np.array(arr_b), desc, coor['geotransform'], coor['geoprojection'], file_format='GTiff')
     
     
     def load_bands(self):
@@ -110,5 +111,4 @@ class sentinel():
                 arr_bands[res][band] = data_bands[res][i]
     
         self.save_files(arr_bands)
-        
         

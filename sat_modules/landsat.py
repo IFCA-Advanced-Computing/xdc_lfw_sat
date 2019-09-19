@@ -22,7 +22,7 @@ from sat_modules import utils
 
 class landsat():
     
-    def __init__(self, tile_path):
+    def __init__(self, tile_path, output_path):
         
         self.max_res = 30
         
@@ -46,6 +46,7 @@ class landsat():
         self.resolutions = [res for res in self.res_to_bands.keys() if res <= self.max_res]
         
         self.tile_path = tile_path
+        self.output_path = output_path
         
     def read_config_file(self):
         
@@ -73,7 +74,7 @@ class landsat():
     def save_files(self):
         
         for res in self.resolutions:
-            output_path = os.path.join(self.tile_path, 'Bands_{}.tif'.format(res))
+            tif_path = os.path.join(self.output_path, 'Bands_{}m.tif'.format(res))
             coord = self.coordinates[res]
             description = self.band_desc[res]
             bands = self.data_bands[res]
@@ -82,7 +83,7 @@ class landsat():
             for b in bands.keys():
                 arr_bands.append(bands[b])
                 desc.append(description[b])
-            gdal_utils.save_gdal(output_path, np.array(arr_bands), desc, coord['geotransform'], coord['geoprojection'], file_format='GTiff')
+            gdal_utils.save_gdal(tif_path, np.array(arr_bands), desc, coord['geotransform'], coord['geoprojection'], file_format='GTiff')
             
     def load_bands(self):
         
@@ -115,6 +116,6 @@ class landsat():
 
     
             self.coordinates[res]['geotransform'] = self.ds_bands[res][0].GetGeoTransform()
-            self.coordinates[res]['geoprojection'] = self.ds_bands[res][0].GetProjection()
+            self.coordinates[res]['geoprojection'] = self.ds_bands[15][0].GetProjection()
         
         self.save_files()

@@ -40,7 +40,7 @@ from sat_modules import sentinel
 #imports apis
 import requests
 from tqdm import tqdm
-import os
+import os, shutil
 import json
 
 class download_sentinel:
@@ -57,7 +57,7 @@ class download_sentinel:
 
         #work path
         self.path = path
-
+        
         #ESA APIs
         self.api_url = 'https://scihub.copernicus.eu/apihub/'
         self.credentials = config.sentinel_pass
@@ -137,7 +137,7 @@ class download_sentinel:
                 continue
             
             #create path and folder for the scene
-            region_path = os.path.join(self.path, self.region)
+            output_path = os.path.join(self.path, self.region, filename)
 
             print ('    Downloading {} files'.format(filename))
             downloaded_files['Sentinel-2'].append(filename)
@@ -153,10 +153,11 @@ class download_sentinel:
                                 pbar.update(chunk_size)
             
             #unzip
-            utils.unzip_zipfile(zipfile, region_path)
-            tile_path = os.path.join(region_path, '{}.SAFE'.format(filename))
-            s = sentinel.sentinel(tile_path)
+            utils.unzip_zipfile(zipfile, self.path)
+            tile_path = os.path.join(self.path, '{}.SAFE'.format(filename))
+            s = sentinel.sentinel(tile_path, output_path)
             s.load_bands()
+            shutil.rmtree(self.tile_path)
 
         # Save the new list of files
         with open(os.path.join(self.path, self.region, 'downloaded_files.json'), 'w') as outfile:
