@@ -37,7 +37,7 @@ from sat_modules import landsat
 #imports apis
 import json
 import requests
-import re, os, shutil 
+import re, os, shutil
 from tqdm import tqdm
 
 class download_landsat:
@@ -167,10 +167,12 @@ class download_landsat:
             if ID in downloaded_files['Landsat 8']:
                 print ("    file {} already downloaded".format(ID))
                 continue
-            
+
             #create path and folder for the scene
             tile_path = os.path.join(self.path, ID)
-            output_path = os.path.join(self.download_path, self.region, ID)
+            print (tile_path)
+            os.mkdir = (tile_path)
+            output_path = os.path.join(self.path, self.region, ID)
 
             print ('    Downloading {} files'.format(ID))
             downloaded_files['Landsat 8'].append(ID)
@@ -184,18 +186,18 @@ class download_landsat:
             with tqdm(total=total_size, unit_scale=True, unit='B') as pbar:
                 with session.get(band_url, stream=True, allow_redirects=True) as r:
                     filename = r.headers['Content-Disposition'].split('=')[-1]
-                    filename = os.path.join(self.tile_path, filename)
+                    filename = os.path.join(self.path, filename)
                     with open(filename, 'wb') as f:
                         for chunk in r.iter_content(chunk_size=chunk_size):
                             if chunk:
                                 f.write(chunk)
                                 pbar.update(chunk_size)
-            
+
             #preprocess data
             utils.unzip_tarfile(filename, tile_path)
             l = landsat.landsat(tile_path, output_path)
             l.load_bands()
-            shutil.rmtree(self.tile_path)
+            shutil.rmtree(tile_path)
 
         # Save the new list of files
         with open(os.path.join(self.path, self.region, 'downloaded_files.json'), 'w') as outfile:

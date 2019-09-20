@@ -21,15 +21,15 @@ from sat_modules import gdal_utils
 from sat_modules import utils
 
 class landsat():
-    
+
     def __init__(self, tile_path, output_path):
-        
+
         self.max_res = 30
-        
+
         # Bands per resolution (bands should be load always in the same order)
         self.res_to_bands = {15: ['B8'],
                              30: ['B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B9', 'B10', 'B11']}
-        
+
         self.band_desc = {30: {'B1': 'B1 Ultra Blue (coastal/aerosol) [435nm-451nm]',
                                'B2': 'B2 Blue [452nm-512nm]',
                                'B3': 'B3 Green [533nm-590nm]',
@@ -42,14 +42,14 @@ class landsat():
                                'B11': 'B11 Thermal Infrared (TIRS) 2 [1150nm-1251nm]'},
                          15: {'B8': 'B8 Panchromatic [503nm-676nm]'}
                          }
-        
+
         self.resolutions = [res for res in self.res_to_bands.keys() if res <= self.max_res]
-        
+
         self.tile_path = tile_path
         self.output_path = output_path
-        
+
     def read_config_file(self):
-        
+
         # Read config
         r = re.compile("^(.*?)MTL.txt$")
         matches = list(filter(r.match, os.listdir(self.tile_path)))
@@ -60,19 +60,21 @@ class landsat():
         config = utils.landsat_config_file(mtl_path)
 
         return config
-            
+
     def read_bands(self, tmp_ds):
-        
+
         tmp_arr = tmp_ds.GetRasterBand(1).ReadAsArray()
         tmp_arr = tmp_arr.astype(np.float32)
         tmp_arr[tmp_arr==0] = np.nan #replace 0's with Nan's
         tmp_arr = np.ma.masked_where(condition=np.isnan(tmp_arr), a=tmp_arr)
-    
+
         return tmp_arr
-    
-    
+
+
     def save_files(self):
-        
+
+        os.mkdir(self.output_path)
+
         for res in self.resolutions:
             tif_path = os.path.join(self.output_path, 'Bands_{}m.tif'.format(res))
             coord = self.coordinates[res]
@@ -84,15 +86,15 @@ class landsat():
                 arr_bands.append(bands[b])
                 desc.append(description[b])
             gdal_utils.save_gdal(tif_path, np.array(arr_bands), desc, coord['geotransform'], coord['geoprojection'], file_format='GTiff')
-            
+
     def load_bands(self):
-        
+
         self.config = self.read_config_file()
-        
+
         # Read dataset bands in GDAL
         self.ds_bands = {res: None for res in self.resolutions}
         self.data_bands = {}
-        
+
         # Get coordinates
         self.coordinates = {}
 

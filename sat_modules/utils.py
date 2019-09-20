@@ -64,7 +64,7 @@ def valid_date(sd, ed):
 
         return sd, ed
 
-    elif isinstance(sd, string_types) and isinstance(ed, string_types):    
+    elif isinstance(sd, string_types) and isinstance(ed, string_types):
         try:
             sd = datetime.datetime.strptime(sd, "%Y-%m-%d")
             ed = datetime.datetime.strptime(ed, "%Y-%m-%d")
@@ -94,20 +94,20 @@ def valid_region(region, coord = None):
     FormatError
             Not a valid region
     """
-    
+
     if region in config.regions:
-        
+
         coordinates = config.regions[region]['coordinates']
-        
+
     else:
-        
+
         #Hacer saltar el widget del mapa
 
         W = round(-360.0 + float(coord.split('[')[2][:8]), 4)
         S = float(coord.split('[')[2][-11:-4])
         E = round(-360.0 + float(coord.split('[')[4][:8]), 4)
         N = float(coord.split('[')[4][-11:-4])
-        
+
         coordinates = {}
         coordinates['W'], coordinates['S'] = W, S
         coordinates['E'], coordinates['N'] = E, N
@@ -116,7 +116,7 @@ def valid_region(region, coord = None):
 
 def configuration_path(output_path, region):
     """
-    Configure the tree of datasets path. 
+    Configure the tree of datasets path.
     Create the folder and the downloaded_files file.
 
     Parameters

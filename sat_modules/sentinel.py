@@ -20,16 +20,16 @@ from osgeo import gdal
 from sat_modules import gdal_utils
 
 class sentinel():
-    
+
     def __init__(self, tile_path, output_path):
-        
+
         self.max_res = 60
 
         # Bands per resolution (bands should be load always in the same order)
         self.res_to_bands = {10: ['B4', 'B3', 'B2', 'B8'],
                              20: ['B5', 'B6', 'B7', 'B8A', 'B11', 'B12'],
                              60: ['B1', 'B9', 'B10']}
-        
+
         self.band_desc = {10: {'B4': 'B4 Red	[665 nm]',
                                'B3': 'B3 Green	[560 nm]',
                                'B2': 'B2 Blue	[490 nm]',
@@ -43,12 +43,12 @@ class sentinel():
                           60: {'B1': 'B1 Aerosol detection	[443 nm]',
                                'B9': 'B9 Water vapour	[945 nm]',
                                'B10': 'B10 Cirrus	[1375 nm]'}}
-        
+
         self. tile_path = tile_path
         self.output_path = output_path
-        
+
     def read_config_file(self):
-        
+
         # Process input tile name
         r = re.compile("^MTD_(.*?)xml$")
         matches = list(filter(r.match, os.listdir(self.tile_path)))
@@ -60,15 +60,17 @@ class sentinel():
         # Open XML file and read band descriptions
         if not os.path.isfile(xml_path):
             raise ValueError('XML path not found.')
-            
+
         raster = gdal.Open(xml_path)
         if raster is None:
             raise Exception('GDAL does not seem to support this file.')
 
         return raster
-    
+
     def save_files(self, arr_bands):
-        
+
+        os.mkdir(self.output_path)
+
         for res in self.sets.keys():
             tif_path = os.path.join(self.output_path, 'Sentinel_Bands_{}m.tif'.format(res))
             coor = self.coord[res]
@@ -80,12 +82,12 @@ class sentinel():
                 arr_b.append(bands[b])
                 desc.append(description[b])
             gdal_utils.save_gdal(tif_path, np.array(arr_b), desc, coor['geotransform'], coor['geoprojection'], file_format='GTiff')
-    
-    
+
+
     def load_bands(self):
-        
+
         self.raster = self.read_config_file()
-        
+
         datasets = self.raster.GetSubDatasets()
         self.sets = {10: [], 20: [], 60: []}
         for dsname, dsdesc in datasets:
@@ -93,7 +95,7 @@ class sentinel():
                 if '{}m resolution'.format(res) in dsdesc:
                     self.sets[res] += [(dsname, dsdesc)]
                     break
-                
+
         # Getting the bands shortnames and descriptions
         data_bands = {10: {}, 20: {}, 60: {}}
         self.coord = {10: {}, 20: {}, 60: {}}
@@ -104,11 +106,10 @@ class sentinel():
             data_bands[res] = ds_bands.ReadAsArray()
             self.coord[res]['geotransform'] = ds_bands.GetGeoTransform()
             self.coord[res]['geoprojection'] = ds_bands.GetProjection()
-            
+
         arr_bands = {10: {}, 20: {}, 60: {}}
         for res in self.sets.keys():
             for i, band in enumerate(self.res_to_bands[res]):
                 arr_bands[res][band] = data_bands[res][i]
-    
+
         self.save_files(arr_bands)
-        

@@ -57,7 +57,7 @@ class download_sentinel:
 
         #work path
         self.path = path
-        
+
         #ESA APIs
         self.api_url = 'https://scihub.copernicus.eu/apihub/'
         self.credentials = config.sentinel_pass
@@ -135,7 +135,7 @@ class download_sentinel:
             if filename in downloaded_files['Sentinel-2']:
                 print ("    file {} already downloaded".format(filename))
                 continue
-            
+
             #create path and folder for the scene
             output_path = os.path.join(self.path, self.region, filename)
 
@@ -151,13 +151,13 @@ class download_sentinel:
                             if chunk:
                                 f.write(chunk)
                                 pbar.update(chunk_size)
-            
+
             #unzip
             utils.unzip_zipfile(zipfile, self.path)
             tile_path = os.path.join(self.path, '{}.SAFE'.format(filename))
             s = sentinel.sentinel(tile_path, output_path)
             s.load_bands()
-            shutil.rmtree(self.tile_path)
+            shutil.rmtree(tile_path)
 
         # Save the new list of files
         with open(os.path.join(self.path, self.region, 'downloaded_files.json'), 'w') as outfile:
