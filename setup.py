@@ -12,15 +12,14 @@
 # limitations under the License.
 
 import setuptools
-from pip._internal.req import parse_requirements
+
+with open('requirements.txt') as f:
+    reqs = f.read().splitlines()
 
 print('###############################\n'
        '[!!!] NOTICE: To run this app, you need to install the following packages: rabbitmq-server celery mysql-server libmysqlclient-dev\n'
        '###############################')
 
-install_reqs = parse_requirements('requirements.txt', session='hack')
-reqs = [str(ir.req) for ir in install_reqs]
-
 setuptools.setup(
-    install_requires=reqs,
+    setup_requires=reqs,
     pbr=True)
