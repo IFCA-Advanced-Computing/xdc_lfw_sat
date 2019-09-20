@@ -123,10 +123,10 @@ def configuration_path(output_path, region):
     ----------
     path : datasets path from config file
     """
-    
+
     region_path = os.path.join(output_path, region)
     file = 'downloaded_files.json'
-    
+
     try:
         with open(os.path.join(output_path, region, file)) as data_file:
             json.load(data_file)
@@ -141,20 +141,19 @@ def configuration_path(output_path, region):
         with open(os.path.join(output_path, region, 'downloaded_files.json'), 'w') as outfile:
             json.dump(dictionary, outfile)
 
-def unzip_tarfile(local_filename, date_path):
+def unzip_tarfile(filename, tile_path):
 
-    tar = tarfile.open(local_filename, "r:gz")
-    tar.extractall(path = date_path)
+    tar = tarfile.open(filename, "r:gz")
+    tar.extractall(path = tile_path)
     tar.close()
-    os.remove(local_filename)
+    os.remove(filename)
 
+def unzip_zipfile(filename, tile_path):
 
-def unzip_zipfile(local_filename, date_path):
-
-    zip_ref = zipfile.ZipFile(local_filename, 'r')
-    zip_ref.extractall(date_path)
+    zip_ref = zipfile.ZipFile(filename, 'r')
+    zip_ref.extractall(tile_path)
     zip_ref.close()
-    os.remove(local_filename)
+    os.remove(filename)
 
 #Sub-functions of read_config_file
 def get_by_path(root, items):

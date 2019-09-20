@@ -12,7 +12,7 @@ Github: garciadd
 """
 
 #APIs
-import os, re
+import os, sys, re
 import numpy as np
 from osgeo import gdal
 
@@ -99,14 +99,14 @@ class landsat():
         self.coordinates = {}
 
         for res in self.resolutions:
-            
+
             print("Loading selected data from GDAL: {}m".format(res))
             self.ds_bands[res] = []
             self.data_bands[res] = {}
             self.coordinates[res] = {}
-            
+
             for band in self.res_to_bands[res]:
-                
+
                 file = self.config['METADATA_FILE_INFO']['LANDSAT_PRODUCT_ID']
                 file_path = os.path.join(self.tile_path, '{}_{}.TIF'.format(file, band))
                 
@@ -118,6 +118,6 @@ class landsat():
 
     
             self.coordinates[res]['geotransform'] = self.ds_bands[res][0].GetGeoTransform()
-            self.coordinates[res]['geoprojection'] = self.ds_bands[15][0].GetProjection()
+            self.coordinates[res]['geoprojection'] = self.ds_bands[res][0].GetProjection()
         
         self.save_files()

@@ -37,7 +37,7 @@ from sat_modules import landsat
 #imports apis
 import json
 import requests
-import re, os, shutil
+import re, sys, os, shutil
 from tqdm import tqdm
 
 class download_landsat:
@@ -170,8 +170,7 @@ class download_landsat:
 
             #create path and folder for the scene
             tile_path = os.path.join(self.path, ID)
-            print (tile_path)
-            os.mkdir = (tile_path)
+            os.mkdir(tile_path)
             output_path = os.path.join(self.path, self.region, ID)
 
             print ('    Downloading {} files'.format(ID))
@@ -181,6 +180,11 @@ class download_landsat:
             band_url = 'https://earthexplorer.usgs.gov/download/12864/{}/STANDARD/EE'.format(ID)
             resp = session.get(band_url, stream=True, allow_redirects=True)
             total_size = int(resp.headers['content-Length'])
+
+            filename = resp.headers['Content-Disposition'].split('=')[-1]
+            print (filename)
+            filename = os.path.join(self.path, filename)
+
 
             #download
             with tqdm(total=total_size, unit_scale=True, unit='B') as pbar:
