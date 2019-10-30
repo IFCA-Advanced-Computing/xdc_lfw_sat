@@ -24,8 +24,6 @@ class landsat():
 
     def __init__(self, tile_path, output_path):
 
-        self.max_res = 30
-
         # Bands per resolution (bands should be load always in the same order)
         self.res_to_bands = {15: ['B8'],
                              30: ['B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B9', 'B10', 'B11']}
@@ -43,7 +41,7 @@ class landsat():
                          15: {'B8': 'B8 Panchromatic [503nm-676nm]'}
                          }
 
-        self.resolutions = [res for res in self.res_to_bands.keys() if res <= self.max_res]
+        self.resolutions = [res for res in self.res_to_bands.keys()]
 
         self.tile_path = tile_path
         self.output_path = output_path
@@ -70,12 +68,40 @@ class landsat():
 
         return tmp_arr
 
+    def load_bands(self):
+
+        config = self.read_config_file()
+
+        # Read dataset bands in GDAL
+        self.data_bands = {}
+
+        # Get coordinates
+        self.coordinates = {}
+
+        for res in self.res_to_bands.keys():
+
+            print("Loading selected data from GDAL: {}m".format(res))
+            self.data_bands[res] = {}
+            self.coordinates[res] = {}
+
+            for band in self.res_to_bands[res]:
+
+                file = config['METADATA_FILE_INFO']['LANDSAT_PRODUCT_ID']
+                file_path = os.path.join(self.tile_path, '{}_{}.TIF'.format(file, band))
+                
+                tmp_ds = gdal.Open(file_path)
+                tmp_arr = self.read_bands(tmp_ds)            
+                self.data_bands[res][band] = tmp_arr
+
+            self.coordinates[res]['geotransform'] = self.ds_bands[res][0].GetGeoTransform()
+            self.coordinates[res]['geoprojection'] = self.ds_bands[res][0].GetProjection()
 
     def save_files(self):
-
+        
+        self.load_bands()
         os.mkdir(self.output_path)
 
-        for res in self.resolutions:
+        for res in self.res_to_bands.keys():
             tif_path = os.path.join(self.output_path, 'Bands_{}m.tif'.format(res))
             coord = self.coordinates[res]
             description = self.band_desc[res]
@@ -86,38 +112,3 @@ class landsat():
                 arr_bands.append(bands[b])
                 desc.append(description[b])
             gdal_utils.save_gdal(tif_path, np.array(arr_bands), desc, coord['geotransform'], coord['geoprojection'], file_format='GTiff')
-
-    def load_bands(self):
-
-        self.config = self.read_config_file()
-
-        # Read dataset bands in GDAL
-        self.ds_bands = {res: None for res in self.resolutions}
-        self.data_bands = {}
-
-        # Get coordinates
-        self.coordinates = {}
-
-        for res in self.resolutions:
-
-            print("Loading selected data from GDAL: {}m".format(res))
-            self.ds_bands[res] = []
-            self.data_bands[res] = {}
-            self.coordinates[res] = {}
-
-            for band in self.res_to_bands[res]:
-
-                file = self.config['METADATA_FILE_INFO']['LANDSAT_PRODUCT_ID']
-                file_path = os.path.join(self.tile_path, '{}_{}.TIF'.format(file, band))
-                
-                tmp_ds = gdal.Open(file_path)
-                self.ds_bands[res].append(tmp_ds)
-                
-                tmp_arr = self.read_bands(tmp_ds)            
-                self.data_bands[res][band] = tmp_arr
-
-    
-            self.coordinates[res]['geotransform'] = self.ds_bands[res][0].GetGeoTransform()
-            self.coordinates[res]['geoprojection'] = self.ds_bands[res][0].GetProjection()
-        
-        self.save_files()
