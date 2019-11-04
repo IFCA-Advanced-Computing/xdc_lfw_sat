@@ -12,23 +12,20 @@ Github: garciadd
 """
 
 #APIs
-import os, re, shutil
+import os, re
 import numpy as np
-from osgeo import gdal
-
-#subfuctions
-from sat_modules import gdal_utils
+from osgeo import gdal, osr
 
 class sentinel():
 
     def __init__(self, tile_path, output_path):
 
         # Bands per resolution (bands should be load always in the same order)
-        self.res_to_bands = {10: ['B4', 'B3', 'B2', 'B8'],
+        self.bands = {10: ['B4', 'B3', 'B2', 'B8'],
                              20: ['B5', 'B6', 'B7', 'B8A', 'B11', 'B12'],
                              60: ['B1', 'B9', 'B10']}
 
-	#Bands descriptions 
+        #Bands descriptions
         self.band_desc = {10: {'B4': 'B4 Red	[665 nm]',
                                'B3': 'B3 Green	[560 nm]',
                                'B2': 'B2 Blue	[490 nm]',
@@ -43,10 +40,11 @@ class sentinel():
                                'B9': 'B9 Water vapour	[945 nm]',
                                'B10': 'B10 Cirrus	[1375 nm]'}}
 
-	#paths
+        #paths
         self.tile_path = tile_path
         self.output_path = output_path
 
+        
     def read_config_file(self):
 
         # Process input tile name
@@ -67,6 +65,7 @@ class sentinel():
 
         return raster
 
+    
     def load_bands(self):
 
         self.sets = {10: [], 20: [], 60: []}
@@ -80,8 +79,8 @@ class sentinel():
         for dsname, dsdesc in datasets:
             for res in self.sets.keys():
                 if '{}m resolution'.format(res) in dsdesc:
-		    
-                    ('Loading bands of Resolution {}'.format(res))
+                    
+                    print('Loading bands of Resolution {}'.format(res))
 
                     self.sets[res] += [(dsname, dsdesc)]
                     ds_bands = gdal.Open(dsname)
@@ -92,22 +91,50 @@ class sentinel():
 
         self.arr_bands = {10: {}, 20: {}, 60: {}}
         for res in self.sets.keys():
-            for i, band in enumerate(self.res_to_bands[res]):
+            for i, band in enumerate(self.bands[res]):
                 self.arr_bands[res][band] = data_bands[res][i]
-	
-    def save_files(self):
 
-        self.load_bands()
+
+    def write_band(self, dst_ds, arr_bands, dataset, band_desc):
+    
+        for i, b in enumerate(arr_bands[dataset]):
+        
+            print ('Saving {} ...'.format(band_desc[dataset][b]))
+        
+            # write band
+            dst_ds.GetRasterBand(i+1).SetDescription(band_desc[dataset][b])
+            dst_ds.GetRasterBand(i+1).SetNoDataValue(np.nan)
+            dst_ds.GetRasterBand(i+1).WriteArray(arr_bands[dataset][b])
+            
+            
+    def save_netCDF(self):
+    
         os.mkdir(self.output_path)
-
-        for res in self.sets.keys():
-            tif_path = os.path.join(self.output_path, 'Sentinel_Bands_{}m.tif'.format(res))
-            coor = self.coord[res]
-            description = self.band_desc[res]
-            bands = self.arr_bands[res]
-            arr_b = []
-            desc = []
-            for i, b in enumerate(self.res_to_bands[res]):
-                arr_b.append(bands[b])
-                desc.append(description[b])
-            gdal_utils.save_gdal(tif_path, np.array(arr_b), desc, coor['geotransform'], coor['geoprojection'], file_format='GTiff')
+        self.load_bands()
+        
+        for dataset in self.band_desc.keys():
+            
+            #path
+            nc_path = os.path.join(self.output_path, 'Bands_{}m.nc'.format(dataset))
+            
+            #properties
+            list_bands = list(self.arr_bands[dataset].keys())
+            num_bands = len(self.arr_bands[dataset])
+            nx, ny = self.arr_bands[dataset][list_bands[0]].shape        
+            gt = self.coord[dataset]['geotransform']
+            epsg = int((self.coord[dataset]['geoprojection'].split(','))[-1][1:-3])
+            
+            # prepare netCDF file
+            dst_drv = gdal.GetDriverByName('netCDF')
+            dst_ds = dst_drv.Create(nc_path, ny, nx, num_bands, gdal.GDT_Float32)
+            dst_ds.SetGeoTransform(gt)
+            srs = osr.SpatialReference() 
+            srs.ImportFromEPSG(epsg)
+            dst_ds.SetProjection(srs.ExportToWkt())
+        
+            #Write bands
+            self.write_band(dst_ds, self.arr_bands, dataset, self.band_desc)
+            
+            # finalize to disk and close
+            dst_ds.FlushCache()
+            dst_ds = None

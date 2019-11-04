@@ -26,15 +26,20 @@ parser.add_argument("-reg",
                    choices=['CdP', 'Cogotas', 'Sanabria'])
 
 
-parser.add_argument('--coord',
+parser.add_argument('-coord',
                     dest='coord',
                     required=False,
                     help='list of coordinates')
 
-parser.add_argument('-sat',
+parser.add_argument('--sat',
 		    help="Sentinel2 or Landsat8",
 		    required=False,
 		    choices=['Sentinel2', 'Landsat8', None])
+
+parser.add_argument('--cloud',
+            help="Maximum percentage of cloud",
+            required=False,
+            choices= [0, 100])
 
 parser.add_argument('-path',
 		   help='output path',
@@ -53,17 +58,16 @@ utils.configuration_path(args.path, args.region)
 
 if args.sat == "Sentinel2":
     #download sentinel files
-    s = download_sentinel.download_sentinel(sd, ed, args.region, coord, path=args.path)
+    s = download_sentinel.download_sentinel(sd, ed, args.region, coord, args.cloud, path=args.path)
     s.download()
 elif args.sat == "Landsat8":
     #download landsat files
-    l = download_landsat.download_landsat(sd, ed, args.region, coord, path=args.path)
+    l = download_landsat.download_landsat(sd, ed, args.region, coord, args.cloud, path=args.path)
     l.download()
 elif args.sat == None:
     #download sentinel and landsat files
-    s = download_sentinel.download_sentinel(sd, ed, args.region, coord, path=args.path)
+    s = download_sentinel.download_sentinel(sd, ed, args.region, coord, args.cloud, path=args.path)
     s.download()
 
-    l = download_landsat.download_landsat(sd, ed, args.region, coord, path=args.path)
+    l = download_landsat.download_landsat(sd, ed, args.region, coord, args.cloud, path=args.path)
     l.download()
-

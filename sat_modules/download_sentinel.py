@@ -35,7 +35,7 @@ Date: Sep 2018
 #imports subfunctions
 from sat_modules import config
 from sat_modules import utils
-from sat_modules import sentinel
+from sat_modules import sentinel_utils
 
 #imports apis
 import requests
@@ -45,8 +45,7 @@ import json
 
 class download_sentinel:
 
-    def __init__(self, inidate, enddate, region, coordinates, platform='Sentinel-2', producttype="S2MSI1C", path=None):
-
+    def __init__(self, inidate, enddate, region, coordinates, platform='Sentinel-2', producttype="S2MSI1C", cloud=100, path=None):
         #Search parameter needed for download
         self.inidate = inidate.strftime('%Y-%m-%dT%H:%M:%SZ')
         self.enddate = enddate.strftime('%Y-%m-%dT%H:%M:%SZ')
@@ -54,6 +53,7 @@ class download_sentinel:
         self.producttype = producttype
         self.platform = platform
         self.region = region
+        self.cloud = cloud
 
         #work path
         self.path = path
@@ -72,7 +72,8 @@ class download_sentinel:
                                                                                                         self.coord['N']),
                  'producttype': self.producttype,
                  'platformname': self.platform,
-                 'beginposition': '[{} TO {}]'.format(self.inidate, self.enddate)
+                 'beginposition': '[{} TO {}]'.format(self.inidate, self.enddate),
+                 'cloudcoverpercentage': '[0 TO {}]'.format(self.cloud)
                  }
 
         data = {'format': 'json',
@@ -155,7 +156,7 @@ class download_sentinel:
             #unzip
             utils.unzip_zipfile(zipfile, self.path)
             tile_path = os.path.join(self.path, '{}.SAFE'.format(filename))
-            s = sentinel.sentinel(tile_path, output_path)
+            s = sentinel_utils.sentinel(tile_path, output_path)
             s.load_bands()
             shutil.rmtree(tile_path)
 

@@ -32,17 +32,17 @@ Date: Sep 2018
 #imports subfunctions
 from sat_modules import config
 from sat_modules import utils
-from sat_modules import landsat
+from sat_modules import landsat_utils
 
 #imports apis
 import json
 import requests
-import re, sys, os, shutil
+import re, os, shutil
 from tqdm import tqdm
 
 class download_landsat:
 
-    def __init__(self, inidate, enddate, region, coordinates, producttype = "LANDSAT_8_C1", path=None):
+    def __init__(self, inidate, enddate, region, coordinates, producttype = "LANDSAT_8_C1", cloud=100, path=None):
         """
         initialize the variables used in the landsat class
 
@@ -59,6 +59,7 @@ class download_landsat:
         self.coord = coordinates
         self.producttype = producttype
         self.region = region
+        self.cloud = cloud
 
         #work path
         self.path = path
@@ -112,7 +113,8 @@ class download_landsat:
                                     'lowerLeft': {'latitude': self.coord['S'], 
                                                   'longitude': self.coord['W']},
                                     'upperRight': {'latitude': self.coord['N'], 
-                                                   'longitude': self.coord['E']}}
+                                                   'longitude': self.coord['E']}},
+                  'maxCloudCover': 10
                   }
 
         key = self.login()
@@ -199,8 +201,8 @@ class download_landsat:
 
             #preprocess data
             utils.unzip_tarfile(filename, tile_path)
-            l = landsat.landsat(tile_path, output_path)
-            l.load_bands()
+            l8 = landsat_utils.landsat(tile_path, output_path)
+            l8.load_bands()
             shutil.rmtree(tile_path)
 
         # Save the new list of files
