@@ -174,6 +174,7 @@ class download_landsat:
             tile_path = os.path.join(self.path, ID)
             os.mkdir(tile_path)
             output_path = os.path.join(self.path, self.region, ID)
+            os.mkdir(output_path)
 
             print ('    Downloading {} files'.format(ID))
             downloaded_files['Landsat 8'].append(ID)

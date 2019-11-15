@@ -14,7 +14,36 @@ Github: garciadd
 #APIs
 import os, re
 import numpy as np
+import time
+
 from osgeo import gdal, osr
+from netCDF4 import Dataset
+
+
+def GetExtent(gt,cols,rows):
+    ''' Return list of corner coordinates from a geotransform
+
+        @type gt:   C{tuple/list}
+        @param gt: geotransform
+        @type cols:   C{int}
+        @param cols: number of columns in the dataset
+        @type rows:   C{int}
+        @param rows: number of rows in the dataset
+        @rtype:    C{[float,...,float]}
+        @return:   coordinates of each corner
+    '''
+    ext=[]
+    xarr=[0,cols]
+    yarr=[0,rows]
+
+    for px in xarr:
+        for py in yarr:
+            x=gt[0]+(px*gt[1])+(py*gt[2])
+            y=gt[3]+(px*gt[4])+(py*gt[5])
+            ext.append([x,y])
+        yarr.reverse()
+    return ext
+
 
 class sentinel():
 
@@ -22,23 +51,23 @@ class sentinel():
 
         # Bands per resolution (bands should be load always in the same order)
         self.bands = {10: ['B4', 'B3', 'B2', 'B8'],
-                             20: ['B5', 'B6', 'B7', 'B8A', 'B11', 'B12'],
-                             60: ['B1', 'B9', 'B10']}
+                      20: ['B5', 'B6', 'B7', 'B8A', 'B11', 'B12'],
+                      60: ['B1', 'B9', 'B10']}
 
         #Bands descriptions
-        self.band_desc = {10: {'B4': 'B4 Red	[665 nm]',
-                               'B3': 'B3 Green	[560 nm]',
-                               'B2': 'B2 Blue	[490 nm]',
-                               'B8': 'B8 Near infrared	[842 nm]'},
-                          20: {'B5': 'B5 Vegetation classification	[705 nm]',
-                               'B6': 'B6 Vegetation classification	[740 nm]',
-                               'B7': 'B7 Vegetation classification	[783 nm]',
-                               'B8A': 'B8A Vegetation classification	[865 nm]',
-                               'B11': 'B11 Snow / ice / cloud discrimination	[1610 nm]',
-                               'B12': 'B12 Snow / ice / cloud discrimination	[2190 nm]'},
-                          60: {'B1': 'B1 Aerosol detection	[443 nm]',
-                               'B9': 'B9 Water vapour	[945 nm]',
-                               'B10': 'B10 Cirrus	[1375 nm]'}}
+        self.band_desc = {10: {'B4': 'B4 Red [665 nm]',
+                               'B3': 'B3 Green [560 nm]',
+                               'B2': 'B2 Blue [490 nm]',
+                               'B8': 'B8 Near infrared [842 nm]'},
+                          20: {'B5': 'B5 Vegetation classification [705 nm]',
+                               'B6': 'B6 Vegetation classification [740 nm]',
+                               'B7': 'B7 Vegetation classification [783 nm]',
+                               'B8A': 'B8A Vegetation classification [865 nm]',
+                               'B11': 'B11 Snow ice cloud discrimination [1610 nm]',
+                               'B12': 'B12 Snow ice cloud discrimination [2190 nm]'},
+                          60: {'B1': 'B1 Aerosol detection [443 nm]',
+                               'B9': 'B9 Water vapour [945 nm]',
+                               'B10': 'B10 Cirrus [1375 nm]'}}
 
         #paths
         self.tile_path = tile_path
@@ -65,76 +94,100 @@ class sentinel():
 
         return raster
 
+
+    def get_latslons(self):
+        
+        xlow, ylow = (self.coord['Corner Coordinates'])[0][1], (self.coord['Corner Coordinates'])[0][0]
+        xup, yup = (self.coord['Corner Coordinates'])[2][1], (self.coord['Corner Coordinates'])[2][0]
+    
+        lats = np.linspace(ylow, yup, num=self.coord['Ysize'])
+        lons = np.linspace(xlow, xup, num=self.coord['Xsize'])
+        
+        return lats, lons
+
+
+    def save_netCDF(self, dataset, arr_bands):
+            
+        #path
+        nc_path = os.path.join(self.output_path, 'Bands_{}.nc'.format(dataset))
+            
+        #latitudes & longitudes arrays
+        lats, lons = self.get_latslons()
+
+        # create a file (Dataset object, also the root group).
+        dsout = Dataset(nc_path, 'w', format='NETCDF4')
+        dsout.description = 'Bands_{}.nc'.format(dataset)
+        dsout.history = 'Created {}'.format(time.ctime(time.time()))
+        dsout.source = 'netCDF4 python module'
+
+        # dimensions.
+        lat = dsout.createDimension('lat', len(lats))
+        lon = dsout.createDimension('lon', len(lons))
+
+        # variables.
+        latitudes = dsout.createVariable('lat','f4',('lat',))
+        longitudes = dsout.createVariable('lon','f4',('lon',))
+
+        latitudes.standard_name = 'latitude'
+        latitudes.units = 'm north'
+        latitudes.axis = "Y"
+        latitudes[:] = lats
+
+        longitudes.standard_name = 'longitude'
+        longitudes.units = 'm east'
+        longitudes.axis = "X"
+        longitudes[:] = lons
+
+        for b in arr_bands:
+
+            print ('Saving {} ...'.format(self.band_desc[dataset][b]))
+
+            band = dsout.createVariable(self.band_desc[dataset][b],
+                                        'f4',
+                                        ('lat', 'lon'),
+                                        least_significant_digit=4,
+                                        fill_value=np.nan
+                                        )
+
+            band[:] = arr_bands[b]
+            band.standard_name = self.band_desc[dataset][b]
+            band.units = 'rad'
+            band.setncattr('grid_mapping', 'spatial_ref')
+
+        crs = dsout.createVariable('spatial_ref', 'i4')
+        crs.spatial_ref = self.coord['geoprojection']
+
+        dsout.close()
+
     
     def load_bands(self):
-
-        self.sets = {10: [], 20: [], 60: []}
-        self.coord = {10: {}, 20: {}, 60: {}}
-        data_bands = {10: {}, 20: {}, 60: {}}
 
         raster = self.read_config_file()
         datasets = raster.GetSubDatasets()
 
     	# Getting the bands shortnames and descriptions
         for dsname, dsdesc in datasets:
-            for res in self.sets.keys():
+
+	    self.coord = {}
+            data_bands = {}
+            self.arr_bands = {}
+
+            for res in self.bands.keys():
                 if '{}m resolution'.format(res) in dsdesc:
                     
                     print('Loading bands of Resolution {}'.format(res))
 
-                    self.sets[res] += [(dsname, dsdesc)]
                     ds_bands = gdal.Open(dsname)
-                    data_bands[res] = ds_bands.ReadAsArray()
-                    self.coord[res]['geotransform'] = ds_bands.GetGeoTransform()
-                    self.coord[res]['geoprojection'] = ds_bands.GetProjection()
+                    data_bands = ds_bands.ReadAsArray()
+                    self.coord['geotransform'] = ds_bands.GetGeoTransform()
+                    self.coord['geoprojection'] = ds_bands.GetProjection()
+                    self.coord['Xsize'] = ds_bands.RasterXSize
+                    self.coord['Ysize'] = ds_bands.RasterYSize
+                    self.coord['Corner Coordinates'] = GetExtent(ds_bands.GetGeoTransform(), ds_bands.RasterXSize, ds_bands.RasterYSize)
+
+                    for i, band in enumerate(self.bands[res]):
+                        self.arr_bands[band] = data_bands[i] / 10000
+
+		    self.save_netCDF(res, self.arr_bands)
+                    
                     break
-
-        self.arr_bands = {10: {}, 20: {}, 60: {}}
-        for res in self.sets.keys():
-            for i, band in enumerate(self.bands[res]):
-                self.arr_bands[res][band] = data_bands[res][i]
-
-
-    def write_band(self, dst_ds, arr_bands, dataset, band_desc):
-    
-        for i, b in enumerate(arr_bands[dataset]):
-        
-            print ('Saving {} ...'.format(band_desc[dataset][b]))
-        
-            # write band
-            dst_ds.GetRasterBand(i+1).SetDescription(band_desc[dataset][b])
-            dst_ds.GetRasterBand(i+1).SetNoDataValue(np.nan)
-            dst_ds.GetRasterBand(i+1).WriteArray(arr_bands[dataset][b])
-            
-            
-    def save_netCDF(self):
-    
-        os.mkdir(self.output_path)
-        self.load_bands()
-        
-        for dataset in self.band_desc.keys():
-            
-            #path
-            nc_path = os.path.join(self.output_path, 'Bands_{}m.nc'.format(dataset))
-            
-            #properties
-            list_bands = list(self.arr_bands[dataset].keys())
-            num_bands = len(self.arr_bands[dataset])
-            nx, ny = self.arr_bands[dataset][list_bands[0]].shape        
-            gt = self.coord[dataset]['geotransform']
-            epsg = int((self.coord[dataset]['geoprojection'].split(','))[-1][1:-3])
-            
-            # prepare netCDF file
-            dst_drv = gdal.GetDriverByName('netCDF')
-            dst_ds = dst_drv.Create(nc_path, ny, nx, num_bands, gdal.GDT_Float32)
-            dst_ds.SetGeoTransform(gt)
-            srs = osr.SpatialReference() 
-            srs.ImportFromEPSG(epsg)
-            dst_ds.SetProjection(srs.ExportToWkt())
-        
-            #Write bands
-            self.write_band(dst_ds, self.arr_bands, dataset, self.band_desc)
-            
-            # finalize to disk and close
-            dst_ds.FlushCache()
-            dst_ds = None
