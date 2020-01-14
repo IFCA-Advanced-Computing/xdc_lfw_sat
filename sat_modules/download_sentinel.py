@@ -139,7 +139,7 @@ class download_sentinel:
 
             #create path and folder for the scene
             output_path = os.path.join(self.path, self.region, filename)
-	    os.mkdir(output_path)
+            os.mkdir(output_path)
 
             print ('    Downloading {} files'.format(filename))
             downloaded_files['Sentinel-2'].append(filename)

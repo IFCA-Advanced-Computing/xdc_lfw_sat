@@ -168,7 +168,7 @@ class sentinel():
     	# Getting the bands shortnames and descriptions
         for dsname, dsdesc in datasets:
 
-	    self.coord = {}
+            self.coord = {}
             data_bands = {}
             self.arr_bands = {}
 
@@ -188,6 +188,6 @@ class sentinel():
                     for i, band in enumerate(self.bands[res]):
                         self.arr_bands[band] = data_bands[i] / 10000
 
-		    self.save_netCDF(res, self.arr_bands)
+                    self.save_netCDF(res, self.arr_bands)
                     
                     break
