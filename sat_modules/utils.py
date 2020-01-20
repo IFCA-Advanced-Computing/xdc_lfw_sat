@@ -33,7 +33,7 @@ import datetime
 from six import string_types
 from functools import reduce
 import operator
-
+import io
 
 def valid_date(sd, ed):
     """
@@ -125,21 +125,11 @@ def configuration_path(output_path, region):
     """
 
     region_path = os.path.join(output_path, region)
-    file = 'downloaded_files.json'
 
-    try:
-        with open(os.path.join(output_path, region, file)) as data_file:
-            json.load(data_file)
-    except:
-        if not (os.path.isdir(region_path)):
-            if not (os.path.isdir(output_path)):
-                os.mkdir(output_path)
-            os.mkdir(region_path)
-
-        dictionary = {"Sentinel-2": [], "Landsat 8": []}
-
-        with open(os.path.join(output_path, region, 'downloaded_files.json'), 'w') as outfile:
-            json.dump(dictionary, outfile)
+    if not (os.path.isdir(region_path)):
+        if not (os.path.isdir(output_path)):
+            os.mkdir(output_path)
+        os.mkdir(region_path)
 
 def unzip_tarfile(filename, tile_path):
 
@@ -206,3 +196,35 @@ def landsat_config_file(tile_path):
     f.close()
     config = config['L1_METADATA_FILE']
     return config
+
+
+def open_compressed(byte_stream, file_format, output_folder):
+    """
+    Extract and save a stream of bytes of a compressed file from memory.
+    Parameters
+    ----------
+    byte_stream : bytes
+    file_format : str
+        Compatible file formats: tarballs, zip files
+    output_folder : str
+        Folder to extract the stream
+    Returns
+    -------
+    Folder name of the extracted files.
+    """
+
+    tar_extensions = ['tar', 'bz2', 'tb2', 'tbz', 'tbz2', 'gz', 'tgz', 'lz', 'lzma', 'tlz', 'xz', 'txz', 'Z', 'tZ']
+    if file_format in tar_extensions:
+        tar = tarfile.open(mode="r:{}".format(file_format), fileobj=io.BytesIO(byte_stream))
+        tar.extractall(output_folder)
+        folder_name = tar.getnames()[0]
+        return os.path.join(output_folder, folder_name)
+
+    elif file_format == 'zip':
+        zf = zipfile.ZipFile(io.BytesIO(byte_stream))
+        zf.extractall(output_folder)
+        folder_name = zf.namelist()[0].split('/')[0]
+        return os.path.join(output_folder, folder_name)
+
+    else:
+        raise ValueError('Invalid file format for the compressed byte_stream')

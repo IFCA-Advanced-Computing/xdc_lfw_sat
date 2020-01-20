@@ -73,7 +73,7 @@ class sentinel():
         self.tile_path = tile_path
         self.output_path = output_path
 
-        
+
     def read_config_file(self):
 
         # Process input tile name
@@ -96,21 +96,21 @@ class sentinel():
 
 
     def get_latslons(self):
-        
+
         xlow, ylow = (self.coord['Corner Coordinates'])[0][1], (self.coord['Corner Coordinates'])[0][0]
         xup, yup = (self.coord['Corner Coordinates'])[2][1], (self.coord['Corner Coordinates'])[2][0]
-    
+
         lats = np.linspace(ylow, yup, num=self.coord['Ysize'])
         lons = np.linspace(xlow, xup, num=self.coord['Xsize'])
-        
+
         return lats, lons
 
 
     def save_netCDF(self, dataset, arr_bands):
-            
+
         #path
         nc_path = os.path.join(self.output_path, 'Bands_{}.nc'.format(dataset))
-            
+
         #latitudes & longitudes arrays
         lats, lons = self.get_latslons()
 
@@ -159,7 +159,6 @@ class sentinel():
 
         dsout.close()
 
-    
     def load_bands(self):
 
         raster = self.read_config_file()
@@ -174,7 +173,7 @@ class sentinel():
 
             for res in self.bands.keys():
                 if '{}m resolution'.format(res) in dsdesc:
-                    
+
                     print('Loading bands of Resolution {}'.format(res))
 
                     ds_bands = gdal.Open(dsname)
@@ -189,5 +188,5 @@ class sentinel():
                         self.arr_bands[band] = data_bands[i] / 10000
 
                     self.save_netCDF(res, self.arr_bands)
-                    
+
                     break

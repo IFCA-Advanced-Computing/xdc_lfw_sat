@@ -27,43 +27,49 @@ Parameters
 inidate: datetime.strptime("YYYY-MM-dd", "%Y-%m-%d")
 enddate: datetime.strptime("YYYY-MM-dd", "%Y-%m-%d")
 region: name of one reservoir saved in the "coord_reservoirs.json" file
+coordinates : dict. Coordinates of the region to search.
+Example: {"W": -2.830, "S": 41.820, "E": -2.690, "N": 41.910}}
+platform : str. Satellite to use from the Sentinel family
+producttype : str. Dataset type.
+cloud: int
+path : path
 
 Author: Daniel Garcia Diaz
 Date: Sep 2018
 """
 
 #imports subfunctions
-from sat_modules import config
 from sat_modules import utils
 from sat_modules import sentinel_utils
 
 #imports apis
 import requests
-from tqdm import tqdm
 import os, shutil
-import json
 
 class download_sentinel:
 
-    def __init__(self, inidate, enddate, region, coordinates, platform='Sentinel-2', producttype="S2MSI1C", cloud=100, path=None):
-        #Search parameter needed for download
+    def __init__(self, inidate, enddate, region, coordinates=None, platform='Sentinel-2', producttype="S2MSI1C", cloud=100,
+                 username=None, password=None, path=None):
+
+        self.session = requests.Session()
+
+        #Search parameters
         self.inidate = inidate.strftime('%Y-%m-%dT%H:%M:%SZ')
         self.enddate = enddate.strftime('%Y-%m-%dT%H:%M:%SZ')
         self.coord = coordinates
         self.producttype = producttype
         self.platform = platform
         self.region = region
-        self.cloud = cloud
+        self.cloud = int(cloud)
 
         #work path
         self.path = path
 
         #ESA APIs
         self.api_url = 'https://scihub.copernicus.eu/apihub/'
-        self.credentials = config.sentinel_pass
+        self.credentials = {'username':username, 'password':password}
 
-
-    def search(self):
+    def search(self, omit_corners=True):
 
         # Post the query to Copernicus
         query = {'footprint': '"Intersects(POLYGON(({0} {1},{2} {1},{2} {3},{0} {3},{0} {1})))"'.format(self.coord['W'],
@@ -84,83 +90,71 @@ class download_sentinel:
                 'q': ' '.join(['{}:{}'.format(k, v) for k, v in query.items()])
                 }
 
-        response = requests.post(self.api_url + 'search?',
+        response = self.session.post(self.api_url + 'search?',
                                  data=data,
                                  auth=(self.credentials['username'], self.credentials['password']),
                                  headers={'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'})
 
+        response.raise_for_status()
+
         # Parse the response
         json_feed = response.json()['feed']
-        print('Found {} results from Sentinel'.format(json_feed['opensearch:totalResults']))
 
-        if int(json_feed['opensearch:totalResults']) == 0:
-            results = []
-
-        else:
+        if 'entry' in json_feed.keys():
             results = json_feed['entry']
-            print('Retrieving {} results'.format(len(results)))
-
             if isinstance(results, dict):  # if the query returns only one product, products will be a dict not a list
                 results = [results]
+        else:
+            results = []
+
+        # Remove results that are mainly corners
+        def keep(r):
+            for item in r['str']:
+                if item['name'] == 'size':
+                    units = item['content'].split(' ')[1]
+                    mult = {'KB': 1, 'MB': 1e3, 'GB': 1e6}[units]
+                    size = float(item['content'].split(' ')[0]) * mult
+                    break
+            if size > 0.5e6:  # 500MB
+                return True
+            else:
+                return False
+        results[:] = [r for r in results if keep(r)]
+
+        print('Found {} results'.format(json_feed['opensearch:totalResults']))
+        print('Retrieving {} results'.format(len(results)))
 
         return results
 
 
     def download(self):
 
-        session = requests.session()
-        session.auth = (self.credentials['username'], self.credentials['password'])
-        chunk_size = 1024
-
-        #load the downloaded files
-        with open(os.path.join(self.path, self.region, 'downloaded_files.json')) as data_file:
-            downloaded_files = json.load(data_file)
-
         #results of the search
         results = self.search()
+        if not isinstance(results, list):
+            results = [results]
 
-        for file in results:
+        for r in results:
 
-            ID = file['id']
-            filename = file['title']
+            url, tile_id = r['link'][0]['href'], r['title']
+            print('Downloading {} ...'.format(tile_id))
 
-            #file size
-            download_url = "https://scihub.copernicus.eu/dhus/odata/v1/Products('{}')/$value".format(ID)
-            resp = session.get(download_url, stream=True, allow_redirects=True)
-            size = int(resp.headers['content-Length'])
+            output_path = os.path.join(self.path, self.region, tile_id)
+            save_dir = os.path.join(self.path, '{}.SAFE'.format(tile_id))
 
-            if size < 250000000: #size Bytes
-                print ("    {} not valid file!, corner image".format(filename))
+            if not os.path.isdir(output_path):
+                os.mkdir(output_path)
+            else:
+                print('File already downloaded')
                 continue
 
-            if filename in downloaded_files['Sentinel-2']:
-                print ("    file {} already downloaded".format(filename))
-                continue
-
-            #create path and folder for the scene
-            output_path = os.path.join(self.path, self.region, filename)
-            os.mkdir(output_path)
-
-            print ('    Downloading {} files'.format(filename))
-            downloaded_files['Sentinel-2'].append(filename)
-
-            #download
-            with tqdm(total = size, unit_scale=True, unit='B') as pbar:
-                with session.get(download_url, auth =session.auth, stream=True, allow_redirects=True) as r:
-                    zipfile = os.path.join(self.path, '{}.zip'.format(filename))
-                    with open(zipfile, 'wb') as f:
-                        for chunk in r.iter_content(chunk_size=chunk_size):
-                            if chunk:
-                                f.write(chunk)
-                                pbar.update(chunk_size)
+            response = self.session.get(url, stream=True, allow_redirects=True, auth=(self.credentials['username'],
+                                                                                      self.credentials['password']))
+            tile_path = utils.open_compressed(byte_stream=response.raw.read(),
+                                             file_format='zip',
+                                             output_folder=self.path)
 
             #unzip
-            utils.unzip_zipfile(zipfile, self.path)
-            tile_path = os.path.join(self.path, '{}.SAFE'.format(filename))
             s = sentinel_utils.sentinel(tile_path, output_path)
             s.load_bands()
             shutil.rmtree(tile_path)
-
-        # Save the new list of files
-        with open(os.path.join(self.path, self.region, 'downloaded_files.json'), 'w') as outfile:
-            json.dump(downloaded_files, outfile)

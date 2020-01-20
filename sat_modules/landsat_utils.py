@@ -66,14 +66,14 @@ def GetExtent(gt,cols,rows):
 
 class DOS(object):
 
-    def __init__(self, metadata, band, arr_bands):
+    def __init__(self, metadata, band, arr_band):
         """
         initialize the variables used to preprocess landsat images
         and apply DOS1 atmospheric correction
         """
 
         self.band = band
-        self.arr_bands = arr_bands
+        self.arr_band = arr_band
         self.name_bands = {'B1': 'BAND_1', 'B2': 'BAND_2', 'B3': 'BAND_3', 'B4': 'BAND_4', 'B5': 'BAND_5', 'B6': 'BAND_6', 'B7': 'BAND_7', 'B8': 'BAND_8', 'B9': 'BAND_9', 'B10': 'BAND_10', 'B11': 'BAND_11'}
 
         self.metadata = metadata
@@ -101,20 +101,20 @@ class DOS(object):
         return Tb
 
     def sr_reflectance(self):
-                
-        name = self.name_bands[band]
-            
-        if band=='B10' or band=='B11':
-                                    
+
+        name = self.name_bands[self.band]
+
+        if self.band=='B10' or self.band=='B11':
+
             self.Ml = float(self.metadata['RADIOMETRIC_RESCALING']['RADIANCE_MULT_{}'.format(name)])
-            self.Al = float(self.metadata['RADIOMETRIC_RESCALING']['RADIANCE_ADD_{}'.format(name)])      
+            self.Al = float(self.metadata['RADIOMETRIC_RESCALING']['RADIANCE_ADD_{}'.format(name)])
             self.k1 = float(self.metadata['TIRS_THERMAL_CONSTANTS']['K1_CONSTANT_{}'.format(name)])
             self.k2 = float(self.metadata['TIRS_THERMAL_CONSTANTS']['K2_CONSTANT_{}'.format(name)])
 
             T = self.sr_thermal(self.arr_band)
 
             return T
-                
+
         else:
 
             self.Ml = float(self.metadata['RADIOMETRIC_RESCALING']['RADIANCE_MULT_{}'.format(name)])
@@ -124,7 +124,7 @@ class DOS(object):
             self.d = float(self.metadata['IMAGE_ATTRIBUTES']['EARTH_SUN_DISTANCE'])
             self.z = 90 - float(self.metadata['IMAGE_ATTRIBUTES']['SUN_ELEVATION'])
             self.Esun = (np.pi * self.d**2) * self.rad_max / self.ref_max
-                    
+
             min_value = np.amin(self.arr_band)
             Lsr = self.sr_radiance(self.arr_band, min_value)
             sr = (np.pi * self.d**2 * Lsr) / (((self.Esun * np.cos(self.z * np.pi / 180.) * self.Tz) + self.Ed) * self.Tv)
@@ -159,9 +159,8 @@ class landsat():
         self.tile_path = tile_path
         self.output_path = output_path
 
-        
     #Read the metadata file of Landsat
-    def read_config_file(self, tile_path):
+    def read_config_file(self):
         """
         Read a LandSat MTL config file to a Python dict
         """
@@ -203,7 +202,6 @@ class landsat():
         config = config['L1_METADATA_FILE']
         return config
 
-
     def read_bands(self, tmp_ds):
 
         tmp_arr = tmp_ds.GetRasterBand(1).ReadAsArray()
@@ -213,23 +211,21 @@ class landsat():
 
         return tmp_arr
 
-
     def get_latslons(self):
-        
+
         xlow, ylow = (self.coordinates['Corner Coordinates'])[0][1], (self.coordinates['Corner Coordinates'])[0][0]
         xup, yup = (self.coordinates['Corner Coordinates'])[2][1], (self.coordinates['Corner Coordinates'])[2][0]
-    
+
         lats = np.linspace(ylow, yup, num=self.coordinates['Ysize'])
         lons = np.linspace(xlow, xup, num=self.coordinates['Xsize'])
-        
+
         return lats, lons
 
-
     def save_netCDF(self, dataset, arr_bands):
-            
+
         #path
         nc_path = os.path.join(self.output_path, '{}.nc'.format(dataset))
-            
+
         #latitudes & longitudes arrays
         lats, lons = self.get_latslons()
 
@@ -289,7 +285,7 @@ class landsat():
 
             # Read dataset bands in GDAL
             self.arr_bands = {}
-            
+
             # Get coordinates
             self.coordinates = {}
 
@@ -297,23 +293,18 @@ class landsat():
 
                 file = self.metadata['METADATA_FILE_INFO']['LANDSAT_PRODUCT_ID']
                 file_path = os.path.join(self.tile_path, '{}_{}.TIF'.format(file, band))
-                
+
                 tmp_ds = gdal.Open(file_path)
                 arr_band = self.read_bands(tmp_ds)
 
                 dos = DOS(self.metadata, band, arr_band)
-                self.arr_bands[band] = dos.sr_reflectance()            
-
-
-            self.coordinates[dataset]['geotransform'] = ds_bands[dataset][0].GetGeoTransform()
-            self.coordinates[dataset]['geoprojection'] = ds_bands[dataset][0].GetProjection()
+                self.arr_bands[band] = dos.sr_reflectance()
 
             self.coordinates['geotransform'] = tmp_ds.GetGeoTransform()
             self.coordinates['geoprojection'] = tmp_ds.GetProjection()
-            
+
             self.coordinates['Xsize'] = tmp_ds.RasterXSize
             self.coordinates['Ysize'] = tmp_ds.RasterYSize
             self.coordinates['Corner Coordinates'] = GetExtent(tmp_ds.GetGeoTransform(), tmp_ds.RasterXSize, tmp_ds.RasterYSize)
-            
-            self.save_netCDF(dataset, self.arr_bands)
 
+            self.save_netCDF(dataset, self.arr_bands)

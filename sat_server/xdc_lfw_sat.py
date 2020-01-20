@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 import argparse
 
+from sat_modules import config
 from sat_modules import utils
 from sat_modules import download_sentinel
 from sat_modules import download_landsat
@@ -38,8 +39,7 @@ parser.add_argument('--sat',
 
 parser.add_argument('--cloud',
             help="Maximum percentage of cloud",
-            required=False,
-            choices= [0, 100])
+            required=False,)
 
 parser.add_argument('-path',
 		   help='output path',
@@ -57,17 +57,74 @@ coord = utils.valid_region(args.region, args.coord)
 utils.configuration_path(args.path, args.region)
 
 if args.sat == "Sentinel2":
+
+    #credentials
+    credentials = config.sentinel_pass
+
+    S2_args = {'inidate':sd,
+               'enddate':ed,
+               'region':args.region,
+               'coordinates': coord,
+               'platform':'Sentinel-2',
+               'producttype':'S2MSI1C',
+               'cloud': args.cloud,
+               'username':credentials['username'],
+               'password': credentials['password'],
+               'path':args.path}
+
     #download sentinel files
-    s = download_sentinel.download_sentinel(sd, ed, args.region, coord, args.cloud, path=args.path)
-    s.download()
-elif args.sat == "Landsat8":
-    #download landsat files
-    l = download_landsat.download_landsat(sd, ed, args.region, coord, args.cloud, path=args.path)
-    l.download()
-elif args.sat == None:
-    #download sentinel and landsat files
-    s = download_sentinel.download_sentinel(sd, ed, args.region, coord, args.cloud, path=args.path)
+    s = download_sentinel.download_sentinel(**S2_args)
     s.download()
 
-    l = download_landsat.download_landsat(sd, ed, args.region, coord, args.cloud, path=args.path)
+elif args.sat == "Landsat8":
+
+    #credentials
+    credentials = config.landsat_pass
+
+    l8_args = {'inidate':sd,
+               'enddate':ed,
+               'region':args.region,
+               'coordinates': coord,
+               'producttype':'LANDSAT_8_C1',
+               'cloud': args.cloud,
+               'username':credentials['username'],
+               'password': credentials['password'],
+               'path':args.path}
+
+    #download landsat files
+    l = download_landsat.download_landsat(**l8_args)
+    l.download()
+
+elif args.sat == None:
+
+    #credentials
+    s2_credentials = config.sentinel_pass
+    l8_credentials = config.landsat_pass
+
+    S2_args = {'inidate':sd,
+               'enddate':ed,
+               'region':args.region,
+               'coordinates': coord,
+               'platform':'Sentinel-2',
+               'producttype':'S2MSI1C',
+               'cloud': args.cloud,
+               'username':s2_credentials['username'],
+               'password': s2_credentials['password'],
+               'path':args.path}
+
+    #download sentinel files
+    s = download_sentinel.download_sentinel(**S2_args)
+    s.download()
+
+    l8_args = {'inidate':sd,
+               'enddate':ed,
+               'region':args.region,
+               'coordinates': coord,
+               'producttype':'LANDSAT_8_C1',
+               'cloud': args.cloud,
+               'username':l8_credentials['username'],
+               'password': l8_credentials['password'],
+               'path':args.path}
+
+    l = download_landsat.download_landsat(**l8_args)
     l.download()
