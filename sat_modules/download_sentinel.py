@@ -150,11 +150,11 @@ class download_sentinel:
 
             response = self.session.get(url, stream=True, allow_redirects=True, auth=(self.credentials['username'],
                                                                                       self.credentials['password']))
-            tile_path = utils.open_compressed(byte_stream=response.raw.read(),
-                                             file_format='zip',
-                                             output_folder=self.path)
+            utils.open_compressed(byte_stream=response.raw.read(),
+                                  file_format='zip',
+                                  output_folder=self.path)
 
             #unzip
-            s = sentinel_utils.sentinel(tile_path, output_path)
+            s = sentinel_utils.sentinel(save_dir, output_path)
             s.load_bands()
             shutil.rmtree(tile_path)
