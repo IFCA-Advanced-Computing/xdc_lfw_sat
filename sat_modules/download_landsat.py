@@ -158,10 +158,10 @@ class download_landsat:
 
             url = 'https://earthexplorer.usgs.gov/download/12864/{}/STANDARD/EE'.format(tile_id)
             response = self.session.get(url, stream=True, allow_redirects=True)
-            tile_path = utils.open_compressed(byte_stream=response.raw.read(),
-                                             file_format='gz',
-                                             output_folder=save_dir)
+            utils.open_compressed(byte_stream=response.raw.read(),
+                                  file_format='gz',
+                                  output_folder=save_dir)
 
-            l8 = landsat_utils.landsat(tile_path=save_dir, output_path=output_path)
+            l8 = landsat_utils.landsat(save_dir, output_path)
             l8.load_bands()
             shutil.rmtree(save_dir)
