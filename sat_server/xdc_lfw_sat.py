@@ -23,8 +23,7 @@ parser.add_argument("-ed",
 parser.add_argument("-reg",
                    "--region",
                    help = "Name of the region selected",
-                   required=True,
-                   choices=['CdP', 'Cogotas', 'Sanabria'])
+                   required=True,)
 
 
 parser.add_argument('--coord',

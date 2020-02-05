@@ -95,10 +95,12 @@ def valid_region(region, coord = None):
             Not a valid region
     """
 
-    if region in config.regions:
-
-        coordinates = config.regions[region]['coordinates']
-
+    if coord == None:
+        if region in config.regions:
+            coordinates = config.regions[region]['coordinates']
+        else:
+            msg = "Region not available. The available regions are: {}".format(config.regions.keys())
+            raise argparse.ArgumentTypeError(msg)
     else:
 
         #Hacer saltar el widget del mapa
