@@ -27,7 +27,6 @@ parser.add_argument("-reg",
 
 
 parser.add_argument('--coord',
-                    dest=None,
                     required=False,
                     help='list of coordinates')
 
