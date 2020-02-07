@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 import argparse
+import json
 
 from sat_modules import config
 from sat_modules import utils
