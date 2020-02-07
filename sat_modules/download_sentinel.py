@@ -157,4 +157,4 @@ class download_sentinel:
             #unzip
             s = sentinel_utils.sentinel(save_dir, output_path)
             s.load_bands()
-            shutil.rmtree(tile_path)
+            shutil.rmtree(save_dir)
