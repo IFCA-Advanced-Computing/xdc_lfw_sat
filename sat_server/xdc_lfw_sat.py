@@ -8,10 +8,16 @@ from sat_modules import download_landsat
 
 parser = argparse.ArgumentParser(description='Gets data from satellite')
 
-parser.add_argument("-m", "--mydict", action="store",
+parser.add_argument("-sat_args", action="store",
                     required=False, type=str)
+
+parser.add_argument('-path',
+                   help='output path',
+                   required=True)
+
 args = parser.parse_args()
-sat_args = json.loads(args.mydict)
+sat_args = json.loads(args.sat_args)
+path = args.path
 
 #Check the format date and if end_date > start_date
 sd, ed = utils.valid_date(sat_args['start_date'], sat_args['end_date'])
@@ -32,7 +38,7 @@ if sat_args['sat_type'] == "Sentinel2":
                'cloud': sat_args['cloud'],
                'username': s2_credentials['username'],
                'password': s2_credentials['password'],
-               'path': sat_args['sat_path']}
+               'path': path}
 
     #download sentinel files
     s = download_sentinel.download_sentinel(**S2_args)
@@ -50,7 +56,7 @@ elif sat_args['sat_type'] == "Landsat8":
                'cloud': sat_args['cloud'],
                'username': l8_credentials['username'],
                'password': l8_credentials['password'],
-               'path': sat_args['sat_path']}
+               'path': path}
 
     #download landsat files
     l = download_landsat.download_landsat(**l8_args)
@@ -70,7 +76,7 @@ elif sat_args['sat_type'] == 'All':
                'cloud': sat_args['cloud'],
                'username': s2_credentials['username'],
                'password': s2_credentials['password'],
-               'path': sat_args['sat_path']}
+               'path': path}
 
     #download sentinel files
     s = download_sentinel.download_sentinel(**S2_args)
@@ -87,7 +93,7 @@ elif sat_args['sat_type'] == 'All':
                'cloud': sat_args['cloud'],
                'username': l8_credentials['username'],
                'password': l8_credentials['password'],
-               'path': sat_args['sat_path']}
+               'path': path}
 
     #download landsat files
     l = download_landsat.download_landsat(**l8_args)
