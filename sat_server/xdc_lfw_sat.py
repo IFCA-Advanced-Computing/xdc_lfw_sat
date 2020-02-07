@@ -24,7 +24,7 @@ path = args.path
 sd, ed = utils.valid_date(sat_args['start_date'], sat_args['end_date'])
 
 #configure the tree of datasets path
-utils.configuration_path(sat_args['sat_path'], sat_args['region'])
+utils.configuration_path(path, sat_args['region'])
 
 if sat_args['sat_type'] == "Sentinel2":
 
