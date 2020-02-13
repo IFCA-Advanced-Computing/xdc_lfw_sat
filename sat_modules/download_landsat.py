@@ -155,6 +155,8 @@ class download_landsat:
                 continue
 
             print('Downloading {} ...'.format(tile_id))
+            print('Downloading on the path {}'.format(save_dir))
+            print('Save on the path {}'.format(output_path)')
 
             url = 'https://earthexplorer.usgs.gov/download/12864/{}/STANDARD/EE'.format(tile_id)
             response = self.session.get(url, stream=True, allow_redirects=True)
