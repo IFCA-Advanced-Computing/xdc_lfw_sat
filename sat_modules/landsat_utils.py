@@ -172,6 +172,8 @@ class landsat():
             mtl_path = os.path.join(self.tile_path, matches[0])
         else:
             raise ValueError('No MTL config file found.')
+            
+        print('xml_path: {}'.format(mtl_path))
 
         f = open(mtl_path)
 
