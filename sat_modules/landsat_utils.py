@@ -14,6 +14,7 @@ Github: garciadd
 from functools import reduce
 import operator
 import os, re
+import shutil
 import numpy as np
 import json
 import time
@@ -172,7 +173,7 @@ class landsat():
             mtl_path = os.path.join(self.tile_path, matches[0])
         else:
             raise ValueError('No MTL config file found.')
-            
+
         print('xml_path: {}'.format(mtl_path))
 
         f = open(mtl_path)
@@ -201,7 +202,13 @@ class landsat():
                 except Exception:
                     set_by_path(root=config, items=group_path + [key], value=value)
         f.close()
-        config = config['L1_METADATA_FILE']
+
+        if 'L1_METADATA_FILE' in list(config.keys()):
+            config = config['L1_METADATA_FILE']
+        else:
+            print ('Error: MTL config file path: {}'.format(mtl_path))
+            print ('MTL config file not support')
+            config = None
         return config
 
     def read_bands(self, tmp_ds):
@@ -280,6 +287,11 @@ class landsat():
     def load_bands(self):
 
         self.metadata = self.read_config_file()
+        if self.metadata is None:
+            shutil.rmtree(self.output_path)
+            return
+        else:
+            pass
 
         for dataset in self.bands.keys():
 

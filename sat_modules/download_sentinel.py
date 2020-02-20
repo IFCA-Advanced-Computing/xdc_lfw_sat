@@ -150,6 +150,7 @@ class download_sentinel:
 
             response = self.session.get(url, stream=True, allow_redirects=True, auth=(self.credentials['username'],
                                                                                       self.credentials['password']))
+
             utils.open_compressed(byte_stream=response.raw.read(),
                                   file_format='zip',
                                   output_folder=self.path)

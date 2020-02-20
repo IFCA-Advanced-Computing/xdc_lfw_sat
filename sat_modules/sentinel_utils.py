@@ -13,6 +13,7 @@ Github: garciadd
 
 #APIs
 import os, re
+import shutil
 import numpy as np
 import time
 
@@ -89,8 +90,6 @@ class sentinel():
             raise ValueError('XML path not found.')
 
         raster = gdal.Open(xml_path)
-        if raster is None:
-            raise Exception('GDAL does not seem to support this file.')
 
         return raster
 
@@ -162,6 +161,13 @@ class sentinel():
     def load_bands(self):
 
         raster = self.read_config_file()
+        if raster is None:
+            print ('not recognized as a supported file format.')
+            print ('deleting the file: {}'.format(self.tile_path))
+            shutil.rmtree(self.output_path)
+            return
+        else:
+            pass
         datasets = raster.GetSubDatasets()
 
     	# Getting the bands shortnames and descriptions
